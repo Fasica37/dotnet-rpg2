@@ -11,6 +11,7 @@ global using dotnet_rpg2.Services.WeaponService;
 global using dotnet_rpg2.Dtos.Weapon;
 global using dotnet_rpg2.Dtos.Skill;
 global using dotnet_rpg2.Services.FightService;
+global using dotnet_rpg2.Dtos.Fight;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
