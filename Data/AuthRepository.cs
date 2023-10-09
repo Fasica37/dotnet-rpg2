@@ -3,21 +3,26 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
-
 namespace dotnet_rpg2.Data
 {
     public class AuthRepository : IAuthRepository
     {
         public DataContext _context;
         private readonly IConfiguration _configuration;
-        public AuthRepository(DataContext context, IConfiguration configuration)
+        private readonly IHttpContextAccessor _httpContext;
+
+        public AuthRepository(DataContext context, IConfiguration configuration, IHttpContextAccessor httpContext)
         {
             _configuration = configuration;
+            _httpContext = httpContext;
             _context = context;
 
         }
+
+        private int GetUserId() => int.Parse(_httpContext.HttpContext!.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         public async Task<ServiceResponse<string>> Login(string userName, string password)
         {
             var response = new ServiceResponse<string>();
@@ -35,6 +40,9 @@ namespace dotnet_rpg2.Data
             else
             {
                 response.Data = CreateToken(user);
+                var refreshToken = GenerateRefreshToken();
+                SetRefreshToken(refreshToken, user);
+                await _context.SaveChangesAsync();
             }
             return response;
         }
@@ -100,12 +108,55 @@ namespace dotnet_rpg2.Data
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(1),
+                Expires = DateTime.Now.AddHours(1),
                 SigningCredentials = creds
             };
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        private RefreshToken GenerateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expires = DateTime.Now.AddDays(7)
+            };
+            return refreshToken;
+        }
+
+        private void SetRefreshToken(RefreshToken newRefreshToken, User user)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = newRefreshToken.Expires
+            };
+            _httpContext.HttpContext!.Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+            user.RefreshToken = newRefreshToken.Token;
+            user.TokenCreated = newRefreshToken.Created;
+            user.TokenExpires = newRefreshToken.Expires;
+
+        }
+
+        public async Task<ServiceResponse<string>> RefreshToken()
+        {
+            var response = new ServiceResponse<string>();
+            var refreshToken = _httpContext.HttpContext!.Request.Cookies["refreshToken"];
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+            if (user!.TokenExpires < DateTime.Now)
+            {
+                response.Success = false;
+                response.Message = "Token expired.";
+                return response;
+            }
+            string token = CreateToken(user);
+            var newRefreshToken = GenerateRefreshToken();
+            SetRefreshToken(newRefreshToken, user);
+            await _context.SaveChangesAsync();
+            response.Data = token;
+            return response;
         }
     }
 }

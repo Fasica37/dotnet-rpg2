@@ -26,5 +26,6 @@ namespace dotnet_rpg2.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Weapon> Weapons => Set<Weapon>();
         public DbSet<Skill> Skills => Set<Skill>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     }
 }

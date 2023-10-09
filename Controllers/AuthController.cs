@@ -1,5 +1,7 @@
 
 
+using Microsoft.AspNetCore.Authorization;
+
 namespace dotnet_rpg2.Controllers
 {
     [ApiController]
@@ -32,6 +34,12 @@ namespace dotnet_rpg2.Controllers
                 return BadRequest(response);
             }
             return Ok(response);
+        }
+        [Authorize]
+        [HttpGet("RefreshToken")]
+        public async Task<ActionResult<ServiceResponse<string>>> RefreshToken()
+        {
+            return Ok(await _authRepository.RefreshToken());
         }
     }
 }
