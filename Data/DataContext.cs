@@ -10,7 +10,7 @@ namespace dotnet_rpg2.Data
     {
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
-
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
