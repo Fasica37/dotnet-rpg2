@@ -14,7 +14,7 @@ namespace dotnet_rpg2.Controllers
             _authRepository = authRepository;
 
         }
-        [HttpPost("Resgister")]
+        [HttpPost("Register")]
         public async Task<ActionResult<ServiceResponse<int>>> Register(UserRegisterDto request)
         {
             var response = await _authRepository.Register(new User { UserName = request.UserName }, request.Password);
